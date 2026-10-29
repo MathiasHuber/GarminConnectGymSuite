@@ -8,6 +8,7 @@ import io.github.mathiashuber.gymsuite.garmin.GarminParsing
 import io.github.mathiashuber.gymsuite.garmin.GarminTokens
 import io.github.mathiashuber.gymsuite.garmin.TokenStore
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.io.File
 
@@ -51,11 +52,16 @@ class SettingsStore(context: Context) {
         .apply()
 }
 
+/** JSON export: the downloaded workouts plus the user's groups, favorites and exclusions. */
+@Serializable
+data class ExportBundle(val data: StoreFile, val userData: UserData)
+
 data class SyncProgress(val message: String, val done: Int = 0, val total: Int = 0)
 
 class Repository(context: Context) {
     private val file = File(context.filesDir, "strength_data.json")
     private val rawDir = File(context.filesDir, "raw_exercise_sets")
+    private val userFile = File(context.filesDir, "user_data.json")
     val tokenStore = PrefsTokenStore(context)
     val client = GarminClient(tokenStore)
 
@@ -65,11 +71,21 @@ class Repository(context: Context) {
         else runCatching { GarminParsing.json.decodeFromString<StoreFile>(file.readText()) }.getOrDefault(StoreFile())
 
     @Synchronized
-    private fun save(store: StoreFile) {
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(GarminParsing.json.encodeToString(store))
-        tmp.renameTo(file)
+    private fun save(store: StoreFile) = writeAtomically(file, GarminParsing.json.encodeToString(store))
+
+    private fun writeAtomically(target: File, text: String) {
+        val tmp = File(target.parentFile, target.name + ".tmp")
+        tmp.writeText(text)
+        tmp.renameTo(target)
     }
+
+    @Synchronized
+    fun loadUserData(): UserData =
+        if (!userFile.exists()) UserData()
+        else runCatching { GarminParsing.json.decodeFromString<UserData>(userFile.readText()) }.getOrDefault(UserData())
+
+    @Synchronized
+    fun saveUserData(data: UserData) = writeAtomically(userFile, GarminParsing.json.encodeToString(data))
 
     /**
      * Download strength activities and their sets.
@@ -115,8 +131,11 @@ class Repository(context: Context) {
         return store
     }
 
-    fun exportJson(): String = GarminParsing.json.encodeToString(load())
+    fun exportJson(): String = GarminParsing.json.encodeToString(ExportBundle(load(), loadUserData()))
 
+    fun exportCsv(): String = Export.toCsv(load().workouts, loadUserData())
+
+    /** Deletes downloaded workouts; groups, favorites and exclusions are kept. */
     fun clearData() {
         file.delete()
         rawDir.deleteRecursively()

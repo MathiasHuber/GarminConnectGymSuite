@@ -17,6 +17,20 @@ there is no server, and the app only talks to Garmin.
   reps (for bodyweight exercises).
 - Records are marked, there is an optional 5-session moving average, and time
   ranges (all / 1 year / 6 months / 3 months) and kg/lb are available.
+- **Favorites.** Tap the heart on an exercise or group to pin it to the top
+  of the list.
+- **Exercise groups.** Garmin often logs the same movement under different
+  names. Long-press exercises to select them, then tap **Group**. The group is
+  charted and summarised as one exercise. Edit it, or add a single exercise to
+  a group, with the pencil on the exercise screen.
+- **Excluding outliers.** Tap a session to untick individual sets or exclude
+  the whole workout. Or tap a point on the chart and choose **Exclude this
+  set**. Excluded data stays visible (struck through) and can be restored; it
+  only drops out of charts, records and e1RM.
+
+Favorites, groups and exclusions live in their own file on the phone. A full
+resync or **Delete local data** doesn't touch them. The JSON export includes
+them, and the CSV has `group` and `excluded` columns.
 
 ## Install
 

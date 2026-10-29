@@ -34,7 +34,7 @@ class ProgressionTest {
 
     @Test
     fun e1rmProgressionIsChronologicalWithRecords() {
-        val pts = Progression.progression(workouts, key, Metric.E1RM, AnalysisSettings())
+        val pts = Progression.progression(workouts, setOf(key), Metric.E1RM, AnalysisSettings())
         assertEquals(listOf(1L, 2L, 3L), pts.map { it.activityId })
         // Session 2: 3x110 (121) beats 8x90 (114).
         assertEquals(121.0, pts[1].value, 1e-9)
@@ -44,7 +44,7 @@ class ProgressionTest {
 
     @Test
     fun highRepSetsAreExcludedFromE1rm() {
-        val pts = Progression.progression(workouts, key, Metric.E1RM, AnalysisSettings(maxRepsForE1rm = 12))
+        val pts = Progression.progression(workouts, setOf(key), Metric.E1RM, AnalysisSettings(maxRepsForE1rm = 12))
         // 15x80 would be 120 with Epley; it must not win over 5x100.
         assertEquals(116.667, pts[2].value, 1e-3)
     }
@@ -52,15 +52,15 @@ class ProgressionTest {
     @Test
     fun otherMetrics() {
         val s = AnalysisSettings()
-        assertEquals(listOf(100.0, 110.0, 100.0), Progression.progression(workouts, key, Metric.MAX_WEIGHT, s).map { it.value })
-        assertEquals(1000.0, Progression.progression(workouts, key, Metric.VOLUME, s)[0].value, 1e-9)
-        assertEquals(listOf(10.0, 11.0, 20.0), Progression.progression(workouts, key, Metric.TOTAL_REPS, s).map { it.value })
+        assertEquals(listOf(100.0, 110.0, 100.0), Progression.progression(workouts, setOf(key), Metric.MAX_WEIGHT, s).map { it.value })
+        assertEquals(1000.0, Progression.progression(workouts, setOf(key), Metric.VOLUME, s)[0].value, 1e-9)
+        assertEquals(listOf(10.0, 11.0, 20.0), Progression.progression(workouts, setOf(key), Metric.TOTAL_REPS, s).map { it.value })
     }
 
     @Test
     fun summary() {
         val sums = Progression.summarize(workouts, AnalysisSettings())
-        val squat = sums.first { it.key == key }
+        val squat = sums.first { it.id == key }
         assertEquals(3, squat.sessions)
         assertEquals(121.0, squat.bestE1rmKg!!, 1e-9)
         assertEquals("2024-01-15", squat.lastDate.toString())
@@ -68,7 +68,7 @@ class ProgressionTest {
 
     @Test
     fun movingAverage() {
-        val pts = Progression.progression(workouts, key, Metric.MAX_WEIGHT, AnalysisSettings())
+        val pts = Progression.progression(workouts, setOf(key), Metric.MAX_WEIGHT, AnalysisSettings())
         assertEquals(listOf(100.0, 105.0, 105.0), Progression.movingAverage(pts, 2))
     }
 

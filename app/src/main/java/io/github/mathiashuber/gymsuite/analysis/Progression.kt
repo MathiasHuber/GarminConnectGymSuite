@@ -44,7 +44,8 @@ data class SessionPoint(
 )
 
 data class ExerciseSummary(
-    val key: String,
+    /** Series id: an exercise key or a group id (see UserData). */
+    val id: String,
     val sessions: Int,
     val totalSets: Int,
     val lastDate: LocalDate,
@@ -71,12 +72,17 @@ object Progression {
         return settings.formula.estimate(w, reps)
     }
 
-    fun summarize(workouts: List<Workout>, settings: AnalysisSettings): List<ExerciseSummary> {
+    /** One summary per series; [seriesOf] maps an exercise key to its series (identity without groups). */
+    fun summarize(
+        workouts: List<Workout>,
+        settings: AnalysisSettings,
+        seriesOf: (String) -> String = { it },
+    ): List<ExerciseSummary> {
         data class Acc(var sessions: Int = 0, var sets: Int = 0, var last: LocalDate = LocalDate.MIN, var best: Double? = null, var weighted: Boolean = false)
         val map = HashMap<String, Acc>()
         for (w in workouts) {
             val d = w.localDate() ?: continue
-            for ((key, sets) in w.sets.groupBy { it.exerciseKey }) {
+            for ((key, sets) in w.sets.groupBy { seriesOf(it.exerciseKey) }) {
                 val a = map.getOrPut(key) { Acc() }
                 a.sessions++
                 a.sets += sets.size
@@ -92,17 +98,17 @@ object Progression {
             .sortedByDescending { it.lastDate }
     }
 
-    /** One point per session in which [exerciseKey] was performed, oldest first. */
+    /** One point per session in which any of [exerciseKeys] was performed, oldest first. */
     fun progression(
         workouts: List<Workout>,
-        exerciseKey: String,
+        exerciseKeys: Set<String>,
         metric: Metric,
         settings: AnalysisSettings,
     ): List<SessionPoint> {
         val points = mutableListOf<SessionPoint>()
         for (w in workouts) {
             val d = w.localDate() ?: continue
-            val sets = w.sets.filter { it.exerciseKey == exerciseKey }
+            val sets = w.sets.filter { it.exerciseKey in exerciseKeys }
             if (sets.isEmpty()) continue
             val point: Pair<Double, StrengthSet?>? = when (metric) {
                 Metric.E1RM -> sets.mapNotNull { s -> e1rm(s, settings)?.let { it to s } }.maxByOrNull { it.first }

@@ -21,7 +21,7 @@ sealed interface Screen {
     data object Home : Screen
     data object Settings : Screen
     data class Login(val flow: LoginFlow) : Screen
-    data class Exercise(val key: String) : Screen
+    data class Exercise(val seriesId: String) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +47,11 @@ private fun App(vm: AppViewModel = viewModel()) {
         )
         Screen.Settings -> SettingsScreen(vm = vm, onBack = pop)
         is Screen.Login -> LoginScreen(vm = vm, flow = screen.flow, onDone = pop)
-        is Screen.Exercise -> ExerciseScreen(vm = vm, exerciseKey = screen.key, onBack = pop)
+        is Screen.Exercise -> ExerciseScreen(
+            vm = vm,
+            seriesId = screen.seriesId,
+            onBack = pop,
+            onReplace = { stack[stack.lastIndex] = Screen.Exercise(it) },
+        )
     }
 }

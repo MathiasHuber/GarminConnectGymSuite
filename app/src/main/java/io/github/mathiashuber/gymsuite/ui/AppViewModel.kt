@@ -5,11 +5,11 @@ import android.net.Uri
 import android.webkit.CookieManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.mathiashuber.gymsuite.data.Export
 import io.github.mathiashuber.gymsuite.data.Repository
 import io.github.mathiashuber.gymsuite.data.SettingsStore
 import io.github.mathiashuber.gymsuite.data.StoreFile
 import io.github.mathiashuber.gymsuite.data.SyncProgress
+import io.github.mathiashuber.gymsuite.data.UserData
 import io.github.mathiashuber.gymsuite.data.UserSettings
 import io.github.mathiashuber.gymsuite.garmin.GarminApiException
 import io.github.mathiashuber.gymsuite.garmin.GarminAuthException
@@ -40,6 +40,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _store = MutableStateFlow(StoreFile())
     val store: StateFlow<StoreFile> = _store.asStateFlow()
 
+    private val _userData = MutableStateFlow(UserData())
+    val userData: StateFlow<UserData> = _userData.asStateFlow()
+
     private val _signedIn = MutableStateFlow(repo.client.isAuthenticated)
     val signedIn: StateFlow<Boolean> = _signedIn.asStateFlow()
 
@@ -55,7 +58,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val message: StateFlow<String?> = _message.asStateFlow()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) { _store.value = repo.load() }
+        viewModelScope.launch(Dispatchers.IO) {
+            _userData.value = repo.loadUserData()
+            _store.value = repo.load()
+        }
     }
 
     fun consumeMessage() { _message.value = null }
@@ -134,7 +140,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         settingsStore.save(s)
     }
 
-    fun exportCsv(uri: Uri) = export(uri) { Export.toCsv(repo.load().workouts) }
+    /** Apply a change to the user's groups/favorites/exclusions and persist it. */
+    fun updateUserData(change: (UserData) -> UserData) {
+        synchronized(_userData) { _userData.value = change(_userData.value) }
+        viewModelScope.launch(Dispatchers.IO) {
+            // Read the latest value under the lock so a slower earlier save can't overwrite a newer one.
+            synchronized(_userData) { repo.saveUserData(_userData.value) }
+        }
+    }
+
+    fun exportCsv(uri: Uri) = export(uri) { repo.exportCsv() }
 
     fun exportJson(uri: Uri) = export(uri) { repo.exportJson() }
 

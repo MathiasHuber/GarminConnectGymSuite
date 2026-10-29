@@ -57,19 +57,31 @@ class GarminClient(private val store: TokenStore) {
             }
             if (code == 204) return "{}"
             if (code in 200..299) return body
-            throw GarminApiException(code, "Garmin API error $code for $path")
+            val detail = GarminParsing.jsonObjectOrNull(body)
+                ?.let { (it["message"] ?: it["error"])?.toString()?.trim('"') }
+                ?: body.take(120).takeIf { it.isNotBlank() && !it.trimStart().startsWith("<") }
+            throw GarminApiException(code, "Garmin API error $code for $path" + (detail?.let { ": $it" } ?: ""))
         }
         throw GarminApiException(401, "Garmin rejected the session; please sign in again")
     }
 
-    /** A page of strength training activities, newest first. */
-    fun strengthActivities(start: Int, limit: Int): List<ActivitySummary> =
-        GarminParsing.parseActivityList(
-            get(
-                "/activitylist-service/activities/search/activities",
-                mapOf("start" to "$start", "limit" to "$limit", "activityType" to "strength_training"),
-            ),
-        ).filter { it.typeKey.isEmpty() || it.typeKey == "strength_training" }
+    /**
+     * A page of fitness-equipment activities (strength training and its
+     * siblings like cardio or elliptical), newest first. The search endpoint
+     * only filters by parent type: activityType=strength_training is a 400.
+     * If Garmin rejects the filter as well, fall back to unfiltered pages.
+     */
+    fun activityPage(start: Int, limit: Int): List<ActivitySummary> {
+        val params = mapOf("start" to "$start", "limit" to "$limit")
+        val path = "/activitylist-service/activities/search/activities"
+        val body = try {
+            get(path, params + ("activityType" to "fitness_equipment"))
+        } catch (e: GarminApiException) {
+            if (e.status != 400) throw e
+            get(path, params)
+        }
+        return GarminParsing.parseActivityList(body)
+    }
 
     fun exerciseSetsRaw(activityId: Long): String = get("/activity-service/activity/$activityId/exerciseSets")
 

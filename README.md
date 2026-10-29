@@ -69,7 +69,7 @@ endpoints at any time.
 
 | What | Endpoint |
 |---|---|
-| Strength activities | `GET connectapi.garmin.com/activitylist-service/activities/search/activities?activityType=strength_training` |
+| Strength activities | `GET connectapi.garmin.com/activitylist-service/activities/search/activities?activityType=fitness_equipment` (filtered to `strength_training` in the app) |
 | Sets of an activity | `GET connectapi.garmin.com/activity-service/activity/{id}/exerciseSets` |
 
 Garmin reports set weight in grams; the app converts it to kg. Rest sets are

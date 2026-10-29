@@ -48,10 +48,12 @@ def export(path: str) -> None:
     rows = []
     start = 0
     while True:
-        page = api.get_activities(start, 100, activitytype="strength_training")
+        page = api.get_activities(start, 100, activitytype="fitness_equipment")
         if not page:
             break
         for act in page:
+            if (act.get("activityType") or {}).get("typeKey") != "strength_training":
+                continue
             sets = api.get_activity_exercise_sets(act["activityId"]).get("exerciseSets") or []
             index = 0
             for s in sets:

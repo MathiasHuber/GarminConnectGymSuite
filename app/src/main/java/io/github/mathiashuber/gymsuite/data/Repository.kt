@@ -87,12 +87,15 @@ class Repository(context: Context) {
         var start = 0
         val pageSize = 100
         while (true) {
-            val page = client.strengthActivities(start, pageSize)
+            val page = client.activityPage(start, pageSize)
             if (page.isEmpty()) break
-            val fresh = page.filter { it.activityId !in known }
+            val strength = page.filter { it.typeKey == "strength_training" }
+            val fresh = strength.filter { it.activityId !in known }
             pending += fresh
-            onProgress(SyncProgress("Found ${pending.size} new activities…"))
-            if (fresh.isEmpty() || page.size < pageSize) break
+            onProgress(SyncProgress("Found ${pending.size} new strength activities…"))
+            // Incremental sync stops once it reaches strength workouts it already has.
+            if (strength.isNotEmpty() && fresh.isEmpty()) break
+            if (page.size < pageSize) break
             start += pageSize
         }
 

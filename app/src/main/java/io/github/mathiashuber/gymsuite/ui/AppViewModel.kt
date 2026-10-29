@@ -18,7 +18,15 @@ import io.github.mathiashuber.gymsuite.garmin.GarminTokens
 import io.github.mathiashuber.gymsuite.garmin.LoginFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.decodeFromString
+import io.github.mathiashuber.gymsuite.analysis.EraResult
+import io.github.mathiashuber.gymsuite.analysis.Eras
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -42,6 +50,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _userData = MutableStateFlow(UserData())
     val userData: StateFlow<UserData> = _userData.asStateFlow()
+
+    /** Detected training eras; null until the first computation finishes. */
+    val eras: StateFlow<EraResult?> = combine(_store, _userData, _settings) { store, user, settings ->
+        // Favorites don't affect eras; leave them out so toggling one doesn't recompute.
+        Triple(store, user.copy(favorites = emptySet()), settings.analysis)
+    }
+        .distinctUntilChanged()
+        .map { (store, user, analysis) -> Eras.detect(store.workouts, user, analysis) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _signedIn = MutableStateFlow(repo.client.isAuthenticated)
     val signedIn: StateFlow<Boolean> = _signedIn.asStateFlow()

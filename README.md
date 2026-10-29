@@ -28,7 +28,36 @@ there is no server, and the app only talks to Garmin.
   set**. Excluded data stays visible (struck through) and can be restored; it
   only drops out of charts, records and e1RM.
 
-Favorites, groups and exclusions live in their own file on the phone. A full
+### Training eras
+
+**Training eras** (card on the home screen) finds the phases of your training
+history and reconstructs the plan you followed in each one:
+
+1. **Session types.** Every workout is classified as Push, Pull, Legs,
+   Upper body, Full body or Core & conditioning from the movements it
+   contains. Movements are recognised by Garmin's exercise name before its
+   category, because the categories are often wrong (e.g. "Suspended Row" is
+   filed under lateral raises). Unidentified sets are ignored. A workout too
+   unidentified to classify borrows the type of other workouts with the same
+   custom name.
+2. **Eras.** The timeline is split where the mix of exercises and session
+   types changes. This is an optimal segmentation that weighs how consistent
+   each era is against how many eras there are; the "detail" slider sets that
+   trade-off. A pause of 6+ weeks always ends an era, and stretches of only a
+   few sessions are shown as "sporadic".
+3. **What each era shows:** an automatic name (e.g. "5×5 Full body",
+   "Hybrid · Push/Pull/Legs", from the split, rep scheme and share of
+   bodyweight work), the rotation (Push → Pull → Legs ↻), sessions per week,
+   weekday rhythm, a session calendar, and **the plan**: per session type, the
+   exercises you did most often, in order, with typical sets × reps (and
+   weight, if logged). It also shows how your main lifts progressed during
+   the era.
+
+You can rename eras, merge an era into the previous one, or start a new era
+at any session. The **Eras** chip on an exercise chart shades the eras behind
+your progress line.
+
+Favorites, groups, exclusions and era edits live in their own file on the phone. A full
 resync or **Delete local data** doesn't touch them. The JSON export includes
 them, and the CSV has `group` and `excluded` columns.
 
@@ -112,7 +141,7 @@ Needs JDK 17+ and the Android SDK (Android Studio, or `ANDROID_HOME` set):
 app/src/main/java/io/github/mathiashuber/gymsuite/
   garmin/    login ticket → token exchange, refresh, API calls, JSON parsing
   data/      models, on-device storage, sync, CSV export
-  analysis/  e1RM formulas and per-session progression
+  analysis/  e1RM formulas, per-session progression, era detection
   ui/        Compose screens and the progress chart
 tools/       python-garminconnect helper (token export, CSV export)
 ```

@@ -77,6 +77,7 @@ fun ExerciseScreen(vm: AppViewModel, seriesId: String, onBack: () -> Unit, onRep
     val store by vm.store.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val userData by vm.userData.collectAsStateWithLifecycle()
+    val eraResult by vm.eras.collectAsStateWithLifecycle()
     val unit = settings.unit
     val group = userData.group(seriesId)
     val keys = userData.membersOf(seriesId)
@@ -99,6 +100,7 @@ fun ExerciseScreen(vm: AppViewModel, seriesId: String, onBack: () -> Unit, onRep
     var metric by rememberSaveable(seriesId) { mutableStateOf(if (hasWeight) Metric.E1RM else Metric.MAX_REPS) }
     var range by rememberSaveable { mutableStateOf(Range.ALL) }
     var showTrend by rememberSaveable { mutableStateOf(true) }
+    var showEras by rememberSaveable { mutableStateOf(false) }
     var selectedId by remember(seriesId, metric, range) { mutableStateOf<Long?>(null) }
     var expanded by remember(seriesId) { mutableStateOf(emptySet<Long>()) }
 
@@ -172,6 +174,7 @@ fun ExerciseScreen(vm: AppViewModel, seriesId: String, onBack: () -> Unit, onRep
                     Range.entries.forEach { r ->
                         FilterChip(selected = r == range, onClick = { range = r }, label = { Text(r.label) })
                     }
+                    FilterChip(selected = showEras, onClick = { showEras = !showEras }, label = { Text("Eras") })
                 }
             }
             item {
@@ -205,6 +208,11 @@ fun ExerciseScreen(vm: AppViewModel, seriesId: String, onBack: () -> Unit, onRep
                                 onSelect = { selectedId = points[it].activityId },
                                 formatY = { fmtNumber(it) },
                                 modifier = Modifier.fillMaxWidth().height(260.dp),
+                                bands = if (showEras) {
+                                    eraResult?.eras.orEmpty().filter { !it.sporadic }.map { ChartBand(it.start, it.end, it.name) }
+                                } else {
+                                    emptyList()
+                                },
                             )
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 LegendSwatch(MaterialTheme.colorScheme.primary, dashed = false, modifier = Modifier.size(18.dp, 12.dp))

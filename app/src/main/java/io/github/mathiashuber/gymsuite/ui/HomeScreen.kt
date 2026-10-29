@@ -2,7 +2,9 @@ package io.github.mathiashuber.gymsuite.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.mathiashuber.gymsuite.analysis.EraResult
 import io.github.mathiashuber.gymsuite.analysis.ExerciseSummary
 import io.github.mathiashuber.gymsuite.analysis.Progression
 import io.github.mathiashuber.gymsuite.data.UserData
@@ -66,8 +69,10 @@ fun HomeScreen(
     onLogin: (LoginFlow) -> Unit,
     onOpenExercise: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenEras: () -> Unit,
 ) {
     val store by vm.store.collectAsStateWithLifecycle()
+    val eras by vm.eras.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val userData by vm.userData.collectAsStateWithLifecycle()
     val signedIn by vm.signedIn.collectAsStateWithLifecycle()
@@ -143,6 +148,9 @@ fun HomeScreen(
                     )
                 }
             }
+            eras?.takeIf { it.eras.any { e -> !e.sporadic } }?.let { res ->
+                item(key = "eras") { ErasCard(res, onClick = onOpenEras) }
+            }
             if (summaries.isNotEmpty()) {
                 item {
                     OutlinedTextField(
@@ -215,6 +223,26 @@ fun HomeScreen(
                 showGroupDialog = false
             },
         )
+    }
+}
+
+@Composable
+private fun ErasCard(result: EraResult, onClick: () -> Unit) {
+    val current = result.current
+    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable(onClick = onClick)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Training eras", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Text("Explore →", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            EraTimeline(result.eras, Modifier.fillMaxWidth().height(44.dp), highlight = current?.key)
+            if (current != null) {
+                Text(
+                    "Now: ${current.name} · since ${current.start.format(java.time.format.DateTimeFormatter.ofPattern("MMM yyyy"))}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
     }
 }
 

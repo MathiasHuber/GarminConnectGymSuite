@@ -26,6 +26,9 @@ import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
 
+/** A labelled date range drawn behind the data, e.g. a training era. */
+data class ChartBand(val start: LocalDate, val end: LocalDate, val label: String)
+
 /** Round axis ticks covering [min, max]. */
 fun niceTicks(min: Double, max: Double, count: Int = 4): List<Double> {
     val lo = if (max > min) min else min - 1
@@ -57,6 +60,7 @@ fun ProgressChart(
     onSelect: (Int) -> Unit,
     formatY: (Double) -> String,
     modifier: Modifier = Modifier,
+    bands: List<ChartBand> = emptyList(),
 ) {
     val colors = MaterialTheme.colorScheme
     val line = colors.primary
@@ -68,7 +72,9 @@ fun ProgressChart(
     val textPx = with(density) { 11.sp.toPx() }
     val leftPad = with(density) { 44.dp.toPx() }
     val bottomPad = with(density) { 22.dp.toPx() }
-    val topPad = with(density) { 10.dp.toPx() }
+    val topPad = with(density) { (if (bands.isEmpty()) 10 else 22).dp.toPx() }
+    val bandFill = colors.onSurface.copy(alpha = 0.07f)
+    val bandEdge = colors.outlineVariant
     val rightPad = with(density) { 12.dp.toPx() }
     val dateFmt = DateTimeFormatter.ofPattern("MMM yy")
 
@@ -103,6 +109,28 @@ fun ProgressChart(
             isAntiAlias = true
             textSize = textPx
             color = textColor
+        }
+
+        // Era bands: alternate shading, a hairline at each start, label on top if it fits.
+        bands.forEachIndexed { bi, band ->
+            val d0 = maxOf(band.start.toEpochDay().toDouble(), xMin)
+            val d1 = minOf(band.end.toEpochDay().toDouble() + 1, xMax)
+            if (d1 <= d0) return@forEachIndexed
+            val bx0 = leftPad + ((d0 - xMin) / (xMax - xMin) * plotW).toFloat()
+            val bx1 = leftPad + ((d1 - xMin) / (xMax - xMin) * plotW).toFloat()
+            if (bi % 2 == 0) {
+                drawRect(bandFill, Offset(bx0, topPad), androidx.compose.ui.geometry.Size(bx1 - bx0, plotH))
+            }
+            drawLine(bandEdge, Offset(bx0, topPad - 4.dp.toPx()), Offset(bx0, topPad + plotH), strokeWidth = 1f)
+            paint.textAlign = android.graphics.Paint.Align.LEFT
+            val room = bx1 - bx0 - 6.dp.toPx()
+            if (room > 24.dp.toPx()) {
+                var text = band.label
+                while (text.length > 3 && paint.measureText(text) > room) text = text.dropLast(2) + "…"
+                if (paint.measureText(text) <= room) {
+                    drawContext.canvas.nativeCanvas.drawText(text, bx0 + 3.dp.toPx(), topPad - 7.dp.toPx(), paint)
+                }
+            }
         }
 
         // Recessive grid and y labels.

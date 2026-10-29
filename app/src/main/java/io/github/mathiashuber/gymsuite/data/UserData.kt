@@ -25,6 +25,14 @@ data class UserData(
     val excludedWorkouts: Set<Long> = emptySet(),
     /** Set references from [setRef]. */
     val excludedSets: Set<String> = emptySet(),
+    /** Era names chosen by the user, keyed by the era's first activity id. */
+    val eraNames: Map<String, String> = emptyMap(),
+    /** Activities where the user forced a new era to start. */
+    val eraSplits: Set<Long> = emptySet(),
+    /** First activities of eras the user merged into the era before. */
+    val eraMerges: Set<Long> = emptySet(),
+    /** Era detection detail, 1 (fewest eras) to 5 (most eras). */
+    val eraDetail: Int = 3,
 ) {
     fun group(seriesId: String): ExerciseGroup? =
         if (seriesId.startsWith(GROUP_PREFIX)) groups.firstOrNull { GROUP_PREFIX + it.id == seriesId } else null
@@ -110,6 +118,17 @@ data class UserData(
         val ids = kept.map { GROUP_PREFIX + it.id }.toSet()
         return copy(groups = kept, favorites = favorites.filter { !it.startsWith(GROUP_PREFIX) || it in ids }.toSet())
     }
+
+    fun renameEra(key: Long, name: String?) = copy(
+        eraNames = if (name.isNullOrBlank()) eraNames - key.toString() else eraNames + (key.toString() to name.trim()),
+    )
+
+    fun mergeEraIntoPrevious(key: Long) = copy(eraMerges = eraMerges + key, eraSplits = eraSplits - key)
+
+    fun startEraAt(activityId: Long) = copy(eraSplits = eraSplits + activityId, eraMerges = eraMerges - activityId)
+
+    /** Forget all era names and boundary edits. */
+    fun resetEras() = copy(eraNames = emptyMap(), eraSplits = emptySet(), eraMerges = emptySet())
 
     companion object {
         const val GROUP_PREFIX = "group:"

@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.mathiashuber.gymsuite.garmin.LoginFlow
 import io.github.mathiashuber.gymsuite.ui.AppViewModel
+import io.github.mathiashuber.gymsuite.ui.EraDetailScreen
+import io.github.mathiashuber.gymsuite.ui.ErasScreen
 import io.github.mathiashuber.gymsuite.ui.ExerciseScreen
 import io.github.mathiashuber.gymsuite.ui.GymSuiteTheme
 import io.github.mathiashuber.gymsuite.ui.HomeScreen
@@ -22,6 +24,8 @@ sealed interface Screen {
     data object Settings : Screen
     data class Login(val flow: LoginFlow) : Screen
     data class Exercise(val seriesId: String) : Screen
+    data object Eras : Screen
+    data class Era(val key: Long) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -44,6 +48,7 @@ private fun App(vm: AppViewModel = viewModel()) {
             onLogin = { stack.add(Screen.Login(it)) },
             onOpenExercise = { stack.add(Screen.Exercise(it)) },
             onOpenSettings = { stack.add(Screen.Settings) },
+            onOpenEras = { stack.add(Screen.Eras) },
         )
         Screen.Settings -> SettingsScreen(vm = vm, onBack = pop)
         is Screen.Login -> LoginScreen(vm = vm, flow = screen.flow, onDone = pop)
@@ -52,6 +57,14 @@ private fun App(vm: AppViewModel = viewModel()) {
             seriesId = screen.seriesId,
             onBack = pop,
             onReplace = { stack[stack.lastIndex] = Screen.Exercise(it) },
+        )
+        Screen.Eras -> ErasScreen(vm = vm, onBack = pop, onOpenEra = { stack.add(Screen.Era(it)) })
+        is Screen.Era -> EraDetailScreen(
+            vm = vm,
+            eraKey = screen.key,
+            onBack = pop,
+            onReplace = { stack[stack.lastIndex] = Screen.Era(it) },
+            onOpenExercise = { stack.add(Screen.Exercise(it)) },
         )
     }
 }

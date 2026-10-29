@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.GymSuite" parent="android:Theme.Material.NoActionBar" />
+</resources>
